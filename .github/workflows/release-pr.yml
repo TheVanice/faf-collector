@@ -1,0 +1,28 @@
+name: Release PR
+
+# A release arrives as branch release/vX.Y.Z. Open a pull request for it, so every
+# public change is reviewed as a diff before it reaches main.
+on:
+  push:
+    branches: ['release/v*']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "pull request for $BRANCH already open"; exit 0
+          fi
+          gh pr create --base main --head "$BRANCH" --title "Release ${BRANCH#release/}" \
+            --body "Review the diff before merging. Merging publishes the release (zip and checksum)."

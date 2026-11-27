@@ -1,0 +1,20 @@
+{"type": "session.start", "id": "e01", "timestamp": "2026-11-22T09:59:58.000Z", "parentId": null, "data": {"sessionId": "cccccccc-1111-2222-3333-444444444444", "producer": "copilot-agent", "copilotVersion": "1.0.108-0", "selectedModel": "gpt-x", "reasoningEffort": "medium", "context": {"cwd": "/repo", "gitRoot": "/repo", "branch": "feature/y"}}}
+{"type": "hook.start", "id": "e02", "timestamp": "2026-11-22T09:59:59.000Z", "parentId": null, "data": {"hookType": "sessionStart"}}
+{"type": "user.message", "id": "e03", "timestamp": "2026-11-22T10:00:00.000Z", "parentId": null, "data": {"messageId": "m1", "delivery": "idle", "turnId": "0"}}
+{"type": "assistant.turn_start", "id": "e04", "timestamp": "2026-11-22T10:00:01.000Z", "parentId": null, "data": {"turnId": "0", "agentMode": "interactive"}}
+{"type": "session.usage_record", "id": "e05", "timestamp": "2026-11-22T10:00:05.000Z", "parentId": null, "data": {"usage": {"model": "gpt-x", "inputTokens": 1000, "outputTokens": 50, "cacheReadTokens": 800, "cacheWriteTokens": 100, "reasoningTokens": 0, "initiator": "user", "reasoningEffort": "high"}}}
+{"type": "tool.execution_start", "id": "e06", "timestamp": "2026-11-22T10:00:06.000Z", "parentId": null, "data": {"toolCallId": "tc1", "toolName": "powershell"}}
+{"type": "tool.execution_complete", "id": "e07", "timestamp": "2026-11-22T10:00:07.000Z", "parentId": null, "data": {"toolCallId": "tc1", "success": false, "error": {"code": "failure"}}}
+{"type": "user.message", "id": "e08", "timestamp": "2026-11-22T10:00:08.000Z", "parentId": null, "data": {"messageId": "m1b", "delivery": "steering"}}
+{"type": "user.message", "id": "e09", "timestamp": "2026-11-22T10:00:09.000Z", "parentId": null, "data": {"messageId": "m1s", "delivery": "idle"}, "agentId": "sub1"}
+{"type": "session.usage_record", "id": "e10", "timestamp": "2026-11-22T10:00:10.000Z", "parentId": null, "data": {"usage": {"model": "claude-haiku-4.5", "inputTokens": 5000, "outputTokens": 900, "cacheReadTokens": 0, "cacheWriteTokens": 0, "reasoningTokens": 0, "initiator": "sub-agent"}}, "agentId": "sub1"}
+{"type": "tool.execution_start", "id": "e11", "timestamp": "2026-11-22T10:00:11.000Z", "parentId": null, "data": {"toolCallId": "tc2", "toolName": "edit"}, "agentId": "sub1"}
+{"type": "tool.execution_complete", "id": "e12", "timestamp": "2026-11-22T10:00:12.000Z", "parentId": null, "data": {"toolCallId": "tc2", "success": false, "error": {"code": "denied"}}, "agentId": "sub1"}
+{"type": "session.usage_record", "id": "e13", "timestamp": "2026-11-22T10:00:20.000Z", "parentId": null, "data": {"usage": {"model": "gpt-x", "inputTokens": 2000, "outputTokens": 100, "cacheReadTokens": 1500, "cacheWriteTokens": 0, "reasoningTokens": 0, "initiator": "agent", "reasoningEffort": "high"}}}
+{"type": "assistant.turn_end", "id": "e14", "timestamp": "2026-11-22T10:00:30.000Z", "parentId": null, "data": {"turnId": "0"}}
+{"type": "hook.start", "id": "e15", "timestamp": "2026-11-22T10:00:31.000Z", "parentId": null, "data": {"hookType": "agentStop"}}
+{"type": "user.message", "id": "e16", "timestamp": "2026-11-22T11:00:00.000Z", "parentId": null, "data": {"messageId": "m2", "delivery": "idle", "source": "autopilot", "isAutopilotContinuation": true}}
+{"type": "assistant.turn_start", "id": "e17", "timestamp": "2026-11-22T11:00:01.000Z", "parentId": null, "data": {"turnId": "1", "agentMode": "autopilot"}}
+{"type": "session.usage_record", "id": "e18", "timestamp": "2026-11-22T11:00:02.000Z", "parentId": null, "data": {"usage": {"model": "gpt-x", "inputTokens": 300, "outputTokens": 10, "cacheReadTokens": 0, "cacheWriteTokens": 0, "reasoningTokens": 0, "initiator": "agent"}}}
+{"type": "abort", "id": "e19", "timestamp": "2026-11-22T11:00:05.000Z", "parentId": null, "data": {"reason": "user_initiated"}}
+{"type": "user.message", "id": "e20", "timestamp": "2026-11-22T12:00:00.000Z", "parentId": null, "data": {"messageId": "m3", "delivery": "idle"}}
