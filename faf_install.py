@@ -123,6 +123,22 @@ def check_python(command):
     return None
 
 
+def left_out(target, providers):
+    """A warning per agent that is neither selected nor hooked here but has sessions of this repo."""
+    lines = []
+    for name, provider in PROVIDERS.items():
+        if provider in providers or provider.installed(target):
+            continue
+        try:
+            count = len(provider.sessions(target))
+        except (OSError, ValueError):
+            continue  # a warning must not stop the install
+        if count:
+            lines.append(f"warning: {provider.LABEL} is not selected, but this machine has {count} of its "
+                         f"sessions for this repo; it is not recorded (add it: faf init --providers {name})")
+    return lines
+
+
 def show_plan(target, providers, dest, copied, repo):
     """Console only: what will change, what is sent, and which files an upload would send."""
     rel = lambda p: p.resolve().relative_to(target).as_posix() if p.resolve().is_relative_to(target) else str(p)
@@ -227,6 +243,9 @@ def main(argv=None):
     repo = git_repo_slug(target)
     dest, copied = collector_destination(target)
     show_plan(target, providers, dest, copied, repo)
+    warnings = left_out(target, providers)
+    for line in warnings:
+        print(line)
     if args.dry_run:
         print("Dry run: nothing changed.")
         return 0
@@ -255,6 +274,8 @@ def main(argv=None):
         warning = check_python(args.python_command or DEFAULT_PYTHON)
         if warning:
             log.info(warning)
+        for line in warnings:  # again, so the log keeps it
+            log.info(line)
         upload = ask_upload(repo, args.upload_instructions, read_config(target))
         ask_key()
         for line in faf_migrate.migrate(target, providers, faf_migrate.context):

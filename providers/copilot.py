@@ -26,9 +26,10 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+import faf_log
 from faf_event import StepEvent, git_branch, git_worktrees, make_event_id, utcnow_iso
 
-from .claude_code import _load_settings, _without_faf, _write_settings
+from .claude_code import _has_faf_hooks, _load_settings, _without_faf, _write_settings
 from .common import (
     agent_type_name,
     boundary,
@@ -50,6 +51,7 @@ from .common import (
 )
 
 NAME = "copilot"
+LABEL = "Copilot"
 PROJECT_DIR_ENV = None  # the repo comes from the payload's cwd
 HOOKS_FILE = Path(".github") / "hooks" / "faf.json"
 DEFAULT_HOOK_SCRIPT = ".faf/collector/faf_hook.py"
@@ -95,6 +97,11 @@ def install(root, python=None, hook_script=DEFAULT_HOOK_SCRIPT):
         hooks[event] = _without_faf(hooks.get(event, [])) + [hook_entry(python, hook_script, event, timeout)]
     _write_settings(path, data)
     return [f"Copilot: registered {', '.join(EVENTS)} hooks in {HOOKS_FILE.as_posix()} (commit this file)"]
+
+
+def installed(root):
+    """Whether this repo has faf hooks for Copilot."""
+    return _has_faf_hooks(Path(root) / HOOKS_FILE)
 
 
 def uninstall(root):
@@ -151,7 +158,7 @@ def skip_reason(hook_input):
 
 def _session_root(hook_input):
     transcript = hook_input.get("transcript_path")
-    if transcript:
+    if transcript and Path(transcript).name == "events.jsonl":
         return Path(transcript).parent.parent
     home = os.environ.get("COPILOT_HOME")
     return (Path(home) if home else Path.home() / ".copilot") / "session-state"
@@ -416,15 +423,29 @@ def _sweep(ctx, exclude):
     return events
 
 
+def _log_missing(hook_input):
+    """Say that a turn or session end brought no session log; no path or session id in the line."""
+    line = "Copilot session log not found: nothing recorded from this session"
+    given = hook_input.get("transcript_path")
+    if given and Path(given).name != "events.jsonl":
+        line += " (the hook names a log format the collector does not read)"
+    elif hook_input.get("hook_event_name") == "SessionEnd":
+        line += " (expected if it had no prompt)"
+    faf_log.LOGGER.info(line)
+
+
 def collect(hook_input, ctx):
     session_id = hook_input.get("session_id")
     events = []
     if session_id and not hook_input.get("agent_id"):
         path = state_path(ctx, NAME, session_id)
         state = load_state(path, session_id)
+        transcript = _transcript(hook_input, session_id)
         if hook_input.get("hook_event_name") == "SessionStart":
             pin(state, getattr(ctx, "started_at", None) or utcnow_iso(), ctx.instruction_version)
-        events += _collect_session(session_id, _transcript(hook_input, session_id), state, ctx)
+        elif not transcript.is_file():  # at session start the log may not be written yet
+            _log_missing(hook_input)
+        events += _collect_session(session_id, transcript, state, ctx)
         save_state(path, state)
     return events + _sweep(ctx, exclude=session_id)
 

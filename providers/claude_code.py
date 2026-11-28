@@ -44,6 +44,7 @@ from .common import (
 )
 
 NAME = "claude-code"
+LABEL = "Claude Code"
 MARKER = "faf_hook.py"
 DEFAULT_HOOK_SCRIPT = ".faf/collector/faf_hook.py"
 PYTHONS = ("python3", "python")
@@ -113,6 +114,13 @@ def _write_settings(path, data):
 
 def _without_faf(groups):
     return [g for g in groups if MARKER not in json.dumps(g)]
+
+
+def _has_faf_hooks(path):
+    try:
+        return MARKER in json.dumps(_load_settings(path).get("hooks", {}))
+    except (OSError, RuntimeError):
+        return False  # unreadable: installing that provider reports it
 
 
 # Runs faf_hook.main from <$PROJECT_DIR_ENV>/<hook_script>; exits 0 without running anything
@@ -215,6 +223,11 @@ def install(root, python, hook_script=DEFAULT_HOOK_SCRIPT):
     if _remove_faf(_local_settings(root), LEGACY_EVENTS):
         lines.append("Claude Code: removed old per-machine hooks from .claude/settings.local.json")
     return lines
+
+
+def installed(root):
+    """Whether this repo has faf hooks for Claude Code, old per-machine ones included."""
+    return any(_has_faf_hooks(p) for p in (_shared_settings(root), _local_settings(root)))
 
 
 def uninstall(root):

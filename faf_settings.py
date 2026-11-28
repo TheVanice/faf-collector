@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlsplit
 
-COLLECTOR_VERSION = "1.2.0"
+COLLECTOR_VERSION = "1.3.0"
 BUILTIN_ENDPOINT = "https://faf-func-34wezaqh.azurewebsites.net/api/ingest"
 INVITE_URL = "https://faf-dash-34wezaqh.icypond-d9c1a18f.westeurope.azurecontainerapps.io/"
 KEY_ENV = "FAF_API_KEY"

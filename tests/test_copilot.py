@@ -209,6 +209,36 @@ class CopilotCollectTests(unittest.TestCase):
         events = self.collect()
         self.assertEqual(events[0]["instruction_version"], "abc123def456")
 
+    def home(self):
+        return mock.patch.dict(os.environ, {"COPILOT_HOME": str(self.session_dir.parent.parent)})
+
+    def test_missing_session_log_is_logged_without_details(self):
+        self.log.unlink()
+        for event, path, suffix in (
+                ("agentStop", str(self.log), ""),
+                ("sessionEnd", None, " (expected if it had no prompt)"),
+                ("agentStop", f"/ws/transcripts/{SESSION}.jsonl",
+                 " (the hook names a log format the collector does not read)")):
+            hook = copilot.normalize({"sessionId": SESSION, "transcriptPath": path}, event)
+            with self.home(), self.assertLogs("faf", "INFO") as logs:
+                self.assertEqual(self.collect(hook), [])
+            self.assertEqual([r.getMessage() for r in logs.records],
+                             ["Copilot session log not found: nothing recorded from this session" + suffix])
+
+    def test_log_that_is_there_or_not_yet_due_is_not_reported_missing(self):
+        with mock.patch.object(copilot.faf_log.LOGGER, "info") as info:
+            self.collect()
+            self.log.unlink()
+            with self.home():
+                self.collect(copilot.normalize({"sessionId": SESSION}, "sessionStart"))
+        info.assert_not_called()
+
+    def test_other_transcript_path_falls_back_to_the_session_log(self):
+        hook = copilot.normalize({"sessionId": SESSION, "transcriptPath": f"/ws/transcripts/{SESSION}.jsonl"},
+                                 "agentStop")
+        with self.home():
+            self.assertEqual(len(self.collect(hook)), 2)
+
     def test_other_sessions_that_grew_are_swept(self):
         self.collect()
         other = copilot.normalize({"sessionId": "other", "cwd": "/repo"}, "agentStop")
