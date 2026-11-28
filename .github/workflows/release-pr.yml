@@ -1,0 +1,34 @@
+name: Release PR
+
+# The next release arrives as branch release/next, its version stamped in faf_settings.py and
+# its notes on top of CHANGELOG.md. Open the pull request for it, or retitle it when a later
+# change raised the version, so every public change is reviewed as a diff before it reaches main.
+on:
+  push:
+    branches: [release/next]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - name: Open or retitle pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="v$(python3 -c 'import faf_settings; print(faf_settings.COLLECTOR_VERSION)')"
+          awk -v h="## $TAG" '$0==h{on=1;next} /^## /{on=0} on' CHANGELOG.md > notes.md
+          printf '\nReview the diff before merging. Merging publishes %s (zip, checksum and its signature).\n' "$TAG" >> notes.md
+          PR=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')
+          if [ -n "$PR" ]; then
+            gh pr edit "$PR" --title "Release $TAG" --body-file notes.md
+          else
+            gh pr create --base main --head "$BRANCH" --title "Release $TAG" --body-file notes.md
+          fi

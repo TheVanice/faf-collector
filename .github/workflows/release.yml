@@ -1,0 +1,58 @@
+name: Release
+
+# Every push to main whose COLLECTOR_VERSION has no release yet becomes release
+# v<version>: zip, checksum, and its CHANGELOG.md section as notes.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - name: Version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v$(python3 -c 'import faf_settings; print(faf_settings.COLLECTOR_VERSION)')"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already released"; echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Zip, checksum, signature, release
+        if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SIGNING_KEY: ${{ secrets.FAF_RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "$SIGNING_KEY" ] || { echo "::error::secret FAF_RELEASE_SIGNING_KEY is not set"; exit 1; }
+          NAME="faf-collector-$TAG"
+          git archive --format=zip --prefix="faf/" -o "$NAME.zip" HEAD -- . ':!.github'
+          sha256sum "$NAME.zip" > "$NAME.zip.sha256"
+          cat "$NAME.zip.sha256"
+          # Ed25519 over the checksum file; faf upgrade and the installers check it with faf_verify.PUBLIC_KEY.
+          KEY="$RUNNER_TEMP/release.key"
+          (umask 077; printf '%s\n' "$SIGNING_KEY" > "$KEY")
+          openssl pkeyutl -sign -inkey "$KEY" -rawin -in "$NAME.zip.sha256" -out "$NAME.zip.sha256.sig"
+          rm -f "$KEY"
+          python3 faf_verify.py "$NAME.zip" "$NAME.zip.sha256" "$NAME.zip.sha256.sig"  # the shipped key matches
+          if [ -f CHANGELOG.md ]; then
+            awk -v h="## $TAG" '$0==h{on=1;next} /^## /{on=0} on' CHANGELOG.md > notes.md
+          else
+            : > notes.md
+          fi
+          echo >> notes.md
+          echo "Install: see README.md. The installers and faf upgrade check the release key's signature (.sha256.sig) of the .sha256 file; see faf_verify.py." >> notes.md
+          gh release create "$TAG" "$NAME.zip" "$NAME.zip.sha256" "$NAME.zip.sha256.sig" --target "$GITHUB_SHA" \
+            --title "$TAG" --notes-file notes.md
