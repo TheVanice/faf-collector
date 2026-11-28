@@ -270,6 +270,21 @@ class InstallerTests(unittest.TestCase):
         self.install_providers("copilot", "--uninstall")
         self.assertEqual(self.copilot_hooks(), {"version": 1, "hooks": {"agentStop": [own], "preToolUse": [own]}})
 
+    def test_agent_left_out_with_sessions_here_is_warned_about_until_hooked(self):
+        session = self.home / "copilot" / "session-state" / "s1"
+        session.mkdir(parents=True)
+        (session / "events.jsonl").write_text("", encoding="utf-8")
+        (session / "workspace.yaml").write_text(f"cwd: {self.repo.resolve()}\n", encoding="utf-8")
+        warning = "warning: Copilot is not selected, but this machine has 1 of its sessions for this repo"
+        env = {"COPILOT_HOME": str(self.home / "copilot"), "CLAUDE_CONFIG_DIR": str(self.home / "claude")}
+        with mock.patch.dict(os.environ, env):
+            self.assertIn(warning, self.install("--dry-run", yes=False))
+            self.assertIn(warning, self.install())
+            log = (self.repo / ".faf" / "local" / "collector.log").read_text(encoding="utf-8")
+            self.assertIn(f"[install] {warning}", log)
+            self.assertNotIn("Claude Code is not selected", self.install_providers("copilot"))  # hooked already
+            self.assertNotIn("is not selected", self.install())  # both hooked now
+
     def install_providers(self, providers, *extra):
         with contextlib.redirect_stdout(io.StringIO()) as out:
             code = faf_install.main(["--target", str(self.repo), "--providers", providers, "--yes", *extra])
